@@ -235,3 +235,270 @@ pytest test_api.py
 
 Agora, o teste integra APIs Python e Java com suporte a contêineres para o MySQL.
 
+
+
+
+
+
+Aqui está o prompt detalhado para você recriar o ambiente descrito, incluindo todas as configurações para Python e Java:
+
+
+---
+
+Prompt para recriar o ambiente
+
+1. Crie a estrutura do projeto:
+
+No terminal, execute o seguinte comando para organizar os arquivos e diretórios:
+
+mkdir -p project/{java_api,python_apis}
+cd project
+touch requirements.txt python_apis/{api_2.py,quote_api.py,test_api.py} java_api/{build.sh,pom.xml}
+mkdir -p java_api/src/main/java/com/example/controller
+touch java_api/src/main/java/com/example/JavaApiApplication.java
+touch java_api/src/main/java/com/example/controller/UserController.java
+
+
+2. Adicione o conteúdo dos arquivos:
+
+Preencha cada arquivo conforme descrito acima:
+
+requirements.txt:
+
+Flask==2.3.2
+Flask-SQLAlchemy==3.0.5
+pymysql==1.1.0
+requests==2.31.0
+testcontainers[mysql]==3.8.0
+pytest==7.4.0
+
+python_apis/api_2.py: (código Python que consulta o banco MySQL e a API da frase do dia)
+
+Veja aqui.
+
+python_apis/quote_api.py: (código Python que retorna a frase do dia)
+
+Veja aqui.
+
+python_apis/test_api.py: (código de teste que integra todas as APIs)
+
+Veja aqui.
+
+java_api/build.sh:
+
+#!/bin/bash
+mvn clean package
+java -jar target/java-api-1.0.0.jar
+
+java_api/pom.xml: (arquivo Maven com as dependências do Spring Boot)
+
+Veja aqui.
+
+java_api/src/main/java/com/example/JavaApiApplication.java: (arquivo principal do Spring Boot)
+
+Veja aqui.
+
+java_api/src/main/java/com/example/controller/UserController.java: (controlador que retorna os dados do usuário)
+
+Veja aqui.
+
+
+
+3. Instale as dependências:
+
+Para Python:
+
+pip install -r requirements.txt
+
+Para Java: Certifique-se de ter o Maven instalado e execute o script de construção:
+
+cd java_api
+bash build.sh
+cd ..
+
+
+
+4. Execute o teste:
+
+Volte ao diretório principal e rode o teste:
+
+pytest python_apis/test_api.py
+
+
+
+
+---
+
+Códigos
+
+api_2.py
+
+import requests
+from flask import Flask, jsonify
+from flask_sqlalchemy import SQLAlchemy
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50))
+    email = db.Column(db.String(100))
+
+@app.route('/users', methods=['GET'])
+def get_users():
+    users = User.query.all()
+    users_list = [{"id": user.id, "name": user.name, "email": user.email} for user in users]
+
+    try:
+        response = requests.get("http://localhost:5002/quote")
+        response.raise_for_status()
+        quote = response.json().get("quote", "Frase não disponível.")
+    except requests.RequestException:
+        quote = "Erro ao obter a frase do dia."
+
+    return jsonify({"users": users_list, "quote_of_the_day": quote})
+
+def create_app(database_uri):
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
+    db.create_all()
+    return app
+
+if __name__ == "__main__":
+    app = create_app('mysql+pymysql://root:password@localhost/testdb')
+    app.run(host="0.0.0.0", port=5001)
+
+quote_api.py
+
+from flask import Flask, jsonify
+
+app = Flask(__name__)
+
+@app.route('/quote', methods=['GET'])
+def get_quote():
+    return jsonify({"quote": "Seja a mudança que você quer ver no mundo."})
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5002)
+
+test_api.py
+
+import requests
+from testcontainers.mysql import MySqlContainer
+from multiprocessing import Process
+from python_apis.api_2 import create_app
+from python_apis.quote_api import app as quote_app
+import subprocess
+import time
+
+def run_api(target_app, port):
+    target_app.run(port=port)
+
+def run_java_api():
+    subprocess.Popen(["bash", "./java_api/build.sh"])
+    time.sleep(10)
+
+def test_api_users_with_quote_and_java():
+    with MySqlContainer("mysql:8.0") as mysql:
+        database_uri = mysql.get_connection_url()
+
+        connection = mysql.get_connection_engine().connect()
+        connection.execute("CREATE TABLE user (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(50), email VARCHAR(100));")
+        connection.execute("INSERT INTO user (name, email) VALUES ('Alice', 'alice@example.com'), ('Bob', 'bob@example.com');")
+        connection.close()
+
+        quote_process = Process(target=run_api, args=(quote_app, 5002))
+        quote_process.start()
+
+        api_process = Process(target=run_api, args=(create_app(database_uri), 5001))
+        api_process.start()
+
+        run_java_api()
+
+        try:
+            response = requests.get("http://localhost:5001/users")
+            assert response.status_code == 200
+            data = response.json()
+
+            assert len(data["users"]) == 2
+            assert data["users"][0]["name"] == "Alice"
+
+            java_response = requests.get("http://localhost:8080/user-info")
+            assert java_response.status_code == 200
+            java_data = java_response.json()
+
+            assert len(java_data["users"]) == 2
+            assert java_data["users"][0]["name"] == "Charlie"
+        finally:
+            quote_process.terminate()
+            api_process.terminate()
+            quote_process.join()
+            api_process.join()
+
+pom.xml
+
+<project>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.example</groupId>
+    <artifactId>java-api</artifactId>
+    <version>1.0.0</version>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+
+JavaApiApplication.java
+
+package com.example;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class JavaApiApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(JavaApiApplication.class, args);
+    }
+}
+
+UserController.java
+
+package com.example.controller;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+public class UserController {
+    @GetMapping("/user-info")
+    public Map<String, Object> getUserInfo() {
+        return Map.of(
+            "users", List.of(
+                Map.of("id", 1, "name", "Charlie", "email", "charlie@example.com"),
+                Map.of("id", 2, "name", "Dave", "email", "dave@example.com")
+            ),
+            "note", "API Java ativa"
+        );
+    }
+}
+
+
+---
+
+Basta seguir o prompt para recriar o ambiente e rodar o teste integrado.
+
+
