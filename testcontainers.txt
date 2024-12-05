@@ -1,0 +1,237 @@
+Para rodar uma API em Java junto com o código Python, você pode seguir os passos abaixo. O exemplo usa o Spring Boot para criar a API Java e integra isso ao ambiente de teste. A API Java será executada em um processo separado, assim como as APIs Python.
+
+
+---
+
+Estrutura do Projeto
+
+project/
+│
+├── api_2.py         # API Python que consulta o MySQL e frase do dia
+├── quote_api.py     # API Python da frase do dia
+├── test_api.py      # Testes com Testcontainers
+├── requirements.txt
+└── java_api/        # API Java com Spring Boot
+    ├── src/
+    ├── pom.xml
+    └── build.sh     # Script para compilar e executar a API
+
+
+---
+
+Passos para Adicionar e Rodar a API Java
+
+1. Criar a API Java
+
+No diretório java_api/, crie uma API básica usando Spring Boot.
+
+pom.xml (dependências do Maven):
+
+<project>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.example</groupId>
+    <artifactId>java-api</artifactId>
+    <version>1.0.0</version>
+    <dependencies>
+        <!-- Spring Boot -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+
+src/main/java/com/example/JavaApiApplication.java:
+
+package com.example;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class JavaApiApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(JavaApiApplication.class, args);
+    }
+}
+
+src/main/java/com/example/controller/UserController.java:
+
+package com.example.controller;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+public class UserController {
+    @GetMapping("/user-info")
+    public Map<String, Object> getUserInfo() {
+        return Map.of(
+            "users", List.of(
+                Map.of("id", 1, "name", "Charlie", "email", "charlie@example.com"),
+                Map.of("id", 2, "name", "Dave", "email", "dave@example.com")
+            ),
+            "note", "API Java ativa"
+        );
+    }
+}
+
+
+---
+
+2. Criar um Script para Compilar e Rodar a API Java
+
+No mesmo diretório (java_api/), crie um arquivo build.sh para automatizar a construção e execução.
+
+build.sh:
+
+#!/bin/bash
+# Compilar a API Java
+mvn clean package
+
+# Rodar a API Java
+java -jar target/java-api-1.0.0.jar
+
+Torne o script executável:
+
+chmod +x build.sh
+
+
+---
+
+3. Alterar o Teste para Usar a API Java
+
+Atualize o test_api.py para rodar a API Java em paralelo.
+
+Novo test_api.py:
+
+import requests
+from testcontainers.mysql import MySqlContainer
+from multiprocessing import Process
+from api_2 import create_app
+from quote_api import app as quote_app
+import subprocess
+import time
+
+def run_api(target_app, port):
+    """Função para rodar APIs em processos separados"""
+    target_app.run(port=port)
+
+def run_java_api():
+    """Função para rodar a API Java"""
+    subprocess.Popen(["bash", "./java_api/build.sh"])
+    time.sleep(10)  # Aguarda a inicialização da API
+
+def test_api_users_with_quote_and_java():
+    # Cria um contêiner MySQL
+    with MySqlContainer("mysql:8.0") as mysql:
+        # Configura a API para usar o banco MySQL no contêiner
+        database_uri = mysql.get_connection_url()
+
+        # Insere dados no banco
+        connection = mysql.get_connection_engine().connect()
+        connection.execute("CREATE TABLE user (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(50), email VARCHAR(100));")
+        connection.execute("INSERT INTO user (name, email) VALUES ('Alice', 'alice@example.com'), ('Bob', 'bob@example.com');")
+        connection.close()
+
+        # Roda a API de frases em um processo separado
+        quote_process = Process(target=run_api, args=(quote_app, 5002))
+        quote_process.start()
+
+        # Roda a API Python principal em um processo separado
+        api_process = Process(target=run_api, args=(create_app(database_uri), 5001))
+        api_process.start()
+
+        # Roda a API Java em paralelo
+        run_java_api()
+
+        try:
+            # Faz a requisição à API principal
+            response = requests.get("http://localhost:5001/users")
+            assert response.status_code == 200
+            data = response.json()
+
+            # Valida os usuários retornados
+            assert len(data["users"]) == 2
+            assert data["users"][0]["name"] == "Alice"
+
+            # Valida a frase do dia
+            assert "quote_of_the_day" in data
+
+            # Faz uma requisição à API Java
+            java_response = requests.get("http://localhost:8080/user-info")
+            assert java_response.status_code == 200
+            java_data = java_response.json()
+
+            # Valida os usuários retornados pela API Java
+            assert len(java_data["users"]) == 2
+            assert java_data["users"][0]["name"] == "Charlie"
+        finally:
+            # Finaliza os processos das APIs Python
+            quote_process.terminate()
+            api_process.terminate()
+            quote_process.join()
+            api_process.join()
+
+
+---
+
+Explicação
+
+1. API Java:
+
+Foi implementada usando Spring Boot.
+
+Retorna informações de usuários e uma mensagem estática.
+
+
+
+2. Script build.sh:
+
+Compila e executa a API Java com Maven e Java.
+
+
+
+3. Teste (test_api.py):
+
+Usa Testcontainers para rodar o banco MySQL.
+
+Executa APIs Python e Java em paralelo.
+
+Faz requisições para todas as APIs e valida as respostas.
+
+
+
+
+
+---
+
+Passos para Executar:
+
+1. Instale as dependências para Python e compile a API Java:
+
+pip install -r requirements.txt
+cd java_api && bash build.sh && cd ..
+
+
+2. Execute o teste:
+
+pytest test_api.py
+
+
+
+
+---
+
+Agora, o teste integra APIs Python e Java com suporte a contêineres para o MySQL.
+
