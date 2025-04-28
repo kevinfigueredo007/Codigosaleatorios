@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "0.3",
+  "description": "Runbook para forçar novo deployment em serviços ECS selecionados",
+  "parameters": {
+    "ClusterName": {
+      "type": "String",
+      "description": "Nome do cluster ECS"
+    },
+    "ServiceNames": {
+      "type": "StringList",
+      "description": "Lista de nomes dos serviços para forçar novo deployment"
+    }
+  },
+  "mainSteps": [
+    {
+      "name": "forceNewDeployment",
+      "action": "aws:executeScript",
+      "inputs": {
+        "Runtime": "python3.8",
+        "Handler": "handler",
+        "Script": "def handler(events, context):\n    import boto3\n    ecs = boto3.client('ecs')\n    cluster = events['ClusterName']\n    services = events['ServiceNames']\n    responses = []\n    for service in services:\n        response = ecs.update_service(\n            cluster=cluster,\n            service=service,\n            forceNewDeployment=True\n        )\n        responses.append(response)\n    return {'message': 'Forçado novo deployment nos serviços', 'details': responses}"
+      }
+    }
+  ]
+}
