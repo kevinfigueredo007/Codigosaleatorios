@@ -1,39 +1,51 @@
----
-schemaVersion: '0.3'
-description: "Força um novo deployment para serviços ECS especificados"
-parameters:
-  ClusterName:
-    type: String
-    description: "Nome do cluster ECS"
-  ServiceNames:
-    type: StringList
-    description: "Lista de nomes de serviços ECS"
-
-mainSteps:
-  - name: ForceNewDeployment
-    action: aws:executeAwsApi
-    inputs:
-      Service: ecs
-      Api: UpdateService
-      Cluster: "{{ ClusterName }}"
-      Service: "{{ ServiceNames[0] }}"
-      ForceNewDeployment: true
-    nextStep: UpdateLoop
-
-  - name: UpdateLoop
-    action: aws:loop
-    inputs:
-      Iteration:
-        Step: UpdateEachService
-        Collection: "{{ ServiceNames }}"
-        MaxConcurrency: 1
-        BatchSize: 1
-
-  - name: UpdateEachService
-    action: aws:executeAwsApi
-    inputs:
-      Service: ecs
-      Api: UpdateService
-      Cluster: "{{ ClusterName }}"
-      Service: "{{ Item }}"
-      ForceNewDeployment: true
+{
+  "schemaVersion": "0.3",
+  "description": "Força um novo deployment para serviços ECS especificados",
+  "parameters": {
+    "ClusterName": {
+      "type": "String",
+      "description": "Nome do cluster ECS"
+    },
+    "ServiceNames": {
+      "type": "StringList",
+      "description": "Lista de nomes de serviços ECS"
+    }
+  },
+  "mainSteps": [
+    {
+      "name": "ForceFirstDeployment",
+      "action": "aws:executeAwsApi",
+      "inputs": {
+        "Service": "ecs",
+        "Api": "UpdateService",
+        "Cluster": "{{ ClusterName }}",
+        "Service": "{{ ServiceNames[0] }}",
+        "ForceNewDeployment": true
+      },
+      "nextStep": "UpdateLoop"
+    },
+    {
+      "name": "UpdateLoop",
+      "action": "aws:loop",
+      "inputs": {
+        "Iteration": {
+          "Step": "UpdateEachService",
+          "Collection": "{{ ServiceNames }}",
+          "MaxConcurrency": 1,
+          "BatchSize": 1
+        }
+      }
+    },
+    {
+      "name": "UpdateEachService",
+      "action": "aws:executeAwsApi",
+      "inputs": {
+        "Service": "ecs",
+        "Api": "UpdateService",
+        "Cluster": "{{ ClusterName }}",
+        "Service": "{{ Item }}",
+        "ForceNewDeployment": true
+      }
+    }
+  ]
+}
