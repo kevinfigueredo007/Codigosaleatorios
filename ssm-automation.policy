@@ -1,0 +1,22 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ssm:DescribeAutomationExecutions",
+        "ssm:GetAutomationExecution",
+        "ssm:DescribeAutomationStepExecutions",
+        "ssm:StopAutomationExecution"
+      ],
+      "Resource": "arn:aws:ssm:<region>:<account-id>:automation-execution/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ssm:StartAutomationExecution",
+      "Resource": [
+        "arn:aws:ssm:<region>:<account-id>:document/<document-name>"
+      ]
+    }
+  ]
+}
