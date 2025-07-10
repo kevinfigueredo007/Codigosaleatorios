@@ -1,22 +1,32 @@
 {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "ssm:DescribeAutomationExecutions",
-        "ssm:GetAutomationExecution",
-        "ssm:DescribeAutomationStepExecutions",
-        "ssm:StopAutomationExecution"
-      ],
-      "Resource": "arn:aws:ssm:<region>:<account-id>:automation-execution/*"
-    },
-    {
-      "Effect": "Allow",
-      "Action": "ssm:StartAutomationExecution",
-      "Resource": [
-        "arn:aws:ssm:<region>:<account-id>:document/<document-name>"
-      ]
-    }
-  ]
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AcessosParaIniciarAutomacoesSSM",
+            "Effect": "Allow",
+            "Action": [
+                "ssm:StartAutomationExecution"
+            ],
+            "Resource": "arn:aws:ssm:us-east-1:908027403582:automation-definition/*"
+        },
+        {
+            "Sid": "describeSSM",
+            "Effect": "Allow",
+            "Action": [
+                "ssm:DescribeDocument",
+                "ssm:DescribeAutomationStepExecutions",
+                "ssm:DescribeAutomationExecutions"
+            ],
+            "Resource": "arn:aws:ssm:us-east-1:908027403582:*"
+        },
+        {
+            "Sid": "AcessosParaGerenciarAutomacoesSSM",
+            "Effect": "Allow",
+            "Action": [
+                "ssm:GetAutomationExecution",
+                "ssm:StopAutomationExecution"
+            ],
+            "Resource": "arn:aws:ssm:us-east-1:908027403582:automation-execution/*"
+        }
+    ]
 }
