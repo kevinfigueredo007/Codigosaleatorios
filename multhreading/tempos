@@ -1,0 +1,4 @@
+async   2.38s
+threads-queue 7.88s
+threads 8.44s
+serial  4m36s
