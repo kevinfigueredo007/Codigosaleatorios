@@ -1,0 +1,119 @@
+// lambda Role
+// Trust
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": [
+                    "ssm.amazonaws.com",
+                    "lambda.amazonaws.com"
+                ]
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+// Policy
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ssm:StartAutomationExecution",
+                "ssm:GetAutomationExecution"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": "arn:aws:iam::488367140555:role/poc-ssm-AutomationExecutionRole",
+            "Condition": {
+                "StringEquals": {
+                    "iam:PassedToService": "ssm.amazonaws.com"
+                }
+            }
+        },
+        {
+            "Effect": "Allow",
+            "Action": "sts:AssumeRole",
+            "Resource": "arn:aws:iam::488367140555:role/poc-ssm-AutomationExecutionRole"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "logs:CreateLogGroup",
+            "Resource": "arn:aws:logs:us-east-1:046219898673:*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": [
+                "arn:aws:logs:us-east-1:046219898673:log-group:/aws/lambda/poc-ssm:*"
+            ]
+        }
+    ]
+}
+
+// poc-ssm-AutomationExecutionRole 
+// Trust
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::046219898673:role/service-role/poc-ssm-role-af2gii2a"
+            },
+            "Action": "sts:AssumeRole"
+        },
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "ssm.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+// Policy
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "PassRole",
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": "arn:aws:iam::488367140555:role/poc-ssm-AutomationExecutionRole"
+        },
+        {
+            "Sid": "AcessoS3",
+            "Effect": "Allow",
+            "Action": [
+                "s3:*",
+                "sqs:sendmessage"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "ssm",
+            "Effect": "Allow",
+            "Action": [
+                "ssm:StartAutomationExecution",
+                "ssm:GetAutomationExecution",
+                "ssm:DescribeAutomationStepExecutions",
+                "ssm:DescribeAutomationExecutions"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+
+
+
+
