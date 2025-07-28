@@ -100,7 +100,7 @@
         {
             "Effect": "Allow",
             "Principal": {
-                "AWS": "arn:aws:iam::046219898673:role/service-role/poc-ssm-role-af2gii2a"
+                "AWS": "arn:aws:iam::046219898673:role/lambda-administration-role"
             },
             "Action": "sts:AssumeRole"
         },
@@ -142,7 +142,7 @@
             "Resource": "arn:aws:ssm:us-east-1:*:automation-execution/*"
         },
         {
-            "Sid": "AcessoS3",
+            "Sid": "AcessoOutrosRecursos",
             "Effect": "Allow",
             "Action": [
                 "s3:*",
