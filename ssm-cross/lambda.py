@@ -1,37 +1,54 @@
 import json
-import boto3
-
-def assume_role(role_arn):
-    sts_client = boto3.client('sts')
-    assumed_role_object = sts_client.assume_role(
-        RoleArn=role_arn,
-        RoleSessionName="AssumeRoleSession1"
-    )
-    credentials = assumed_role_object['Credentials']
-    return credentials
-
-credentials = assume_role("arn:aws:iam::488367140555:role/poc-ssm-AutomationExecutionRole")
-
-ssm = boto3.client('ssm')
-ssm_step = boto3.client('ssm',
-         aws_access_key_id=credentials["AccessKeyId"],
-         aws_secret_access_key=credentials["SecretAccessKey"],
-         aws_session_token=credentials["SessionToken"],
-     )
+from time import sleep
+from time import sleep
+from funcs import start_automation, get_automation_execution, describe_automation_step_executions, describe_automation_executions, share_document, stop_automation, list_shared_accounts
 
 
 def lambda_handler(event, context):
+    
+    event = json.loads(event['body'])
+    print("evento: ", event)
+
+    if event.get('senha') != '0a532dfb-9ff4-47f8-a4d3-4ce6b832a477':
+        return {
+            'statusCode': 401,
+            'body': json.dumps({"error": "Unauthorized"})
+        }
+
     try:
     
-        account_id = event['account_id']
-        region = event['region']
-        document_name = event['document_name']
-        parameters = event['parameters']
-    
+        account_id = event.get('account_id')
+        region = event.get('region')
+        document_name = event.get('document_name')
+        parameters = event.get('parameters')
+        execution_id = event.get('execution_id')
+        action = event.get('action')
+        print("action: ", action)
+
         
-        #response = start_automation(account_id, region, document_name, parameters)
-        execution_id = get_automation_execution("2c2ed008-4d35-4944-ac89-c69999e98dc8")
-        response = describe_automation_step_executions(execution_id)
+
+        match action:
+            case 'start_automation':
+                response = start_automation(account_id, region, document_name, parameters)
+            case 'stop_automation':
+                response = stop_automation(execution_id)
+            case 'get_execution':
+                execution_id = get_automation_execution(execution_id)
+                response = describe_automation_step_executions(execution_id)
+            case 'share_document':
+                adicionar = event.get('adicionar')
+                response = share_document(account_id, document_name, adicionar)
+            case 'list_shared_accounts':
+                response = list_shared_accounts(document_name)
+
+            case _:
+                raise ValueError(f"Invalid action: {action}")
+        
+
+        #response = describe_automation_executions()
+        
+        #sleep(6)
+        #response = stop_automation(response)
 
         # Retorna o ID da execução
         return {
@@ -56,49 +73,3 @@ def lambda_handler(event, context):
         }
 
 
-def start_automation(account_id, region, document_name, parameters):
-
-    arn_assume_role = 'arn:aws:iam::046219898673:role/service-role/poc-ssm-role-af2gii2a'
-    
-    print(f"Iniciando a automação do documento: {document_name}...")
-    
-    # Chama a API StartAutomationExecution
-    response = ssm.start_automation_execution(
-    DocumentName=document_name,
-    DocumentVersion='$DEFAULT',
-    Parameters={
-        'AutomationAssumeRole': [arn_assume_role],
-        'arg1': ["Minha mensagem"],
-        'arg2': ['https://sqs.us-east-1.amazonaws.com/488367140555/conta1']
-    },
-    TargetLocations=[
-        {
-            'Accounts': [account_id],
-            'Regions': [region],
-            'ExecutionRoleName': 'poc-ssm-AutomationExecutionRole'
-        }
-    ]
-)
-    
-    # Pega o ID da execução para o log
-    automation_execution_id = response['AutomationExecutionId']
-    
-    print(f"Automação iniciada com sucesso! ID da Execução: {automation_execution_id}")
-    return automation_execution_id
-
-def get_automation_execution(execution_id):
-    response = ssm.get_automation_execution(
-        AutomationExecutionId=execution_id
-    )
-
-    execution = response['AutomationExecution']["StepExecutions"][0]["Outputs"]["ExecutionId"][0]
-
-    #print(execution)
-    
-    return execution
-
-def describe_automation_step_executions(execution_id):
-    response = ssm_step.describe_automation_step_executions(
-        AutomationExecutionId=execution_id
-    )
-    return str(response)
