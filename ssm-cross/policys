@@ -1,4 +1,4 @@
-// lambda Role
+// lambda Role / Administration Role
 // Trust
 {
     "Version": "2012-10-17",
@@ -7,30 +7,62 @@
             "Effect": "Allow",
             "Principal": {
                 "Service": [
-                    "ssm.amazonaws.com",
-                    "lambda.amazonaws.com"
+                    "lambda.amazonaws.com",
+                    "ssm.amazonaws.com"
                 ]
             },
             "Action": "sts:AssumeRole"
         }
     ]
 }
+
 // Policy
 {
     "Version": "2012-10-17",
     "Statement": [
         {
+            "Sid": "ssmStart",
             "Effect": "Allow",
             "Action": [
-                "ssm:StartAutomationExecution",
-                "ssm:GetAutomationExecution"
+                "ssm:StartAutomationExecution"
             ],
-            "Resource": "*"
+            "Resource": "arn:aws:ssm:us-east-1:*:automation-definition/poc-*",
+            "Condition": {
+                "StringEquals": {
+                    "ssm:ResourceTag/Squad": "Millennium"
+                }
+            }
+        },
+        {
+            "Sid": "taguear",
+            "Effect": "Allow",
+            "Action": [
+                "ssm:AddTagsToResource"
+            ],
+            "Resource": [
+                "arn:aws:ssm:us-east-1:*:automation-execution/*",
+                "arn:aws:ssm:us-east-1:*:automation-definition/poc-*"
+            ]
+        },
+        {
+            "Sid": "ssmGet",
+            "Effect": "Allow",
+            "Action": [
+                "ssm:GetAutomationExecution",
+                "ssm:DescribeAutomationStepExecutions",
+                "ssm:DescribeAutomationExecutions"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "ssm:ResourceTag/Squad": "Millennium"
+                }
+            }
         },
         {
             "Effect": "Allow",
             "Action": "iam:PassRole",
-            "Resource": "arn:aws:iam::488367140555:role/poc-ssm-AutomationExecutionRole",
+            "Resource": "arn:aws:iam::046219898673:role/lambda-administration-role",
             "Condition": {
                 "StringEquals": {
                     "iam:PassedToService": "ssm.amazonaws.com"
@@ -92,22 +124,29 @@
             "Resource": "arn:aws:iam::488367140555:role/poc-ssm-AutomationExecutionRole"
         },
         {
+            "Sid": "ssmStart",
+            "Effect": "Allow",
+            "Action": [
+                "ssm:StartAutomationExecution"
+            ],
+            "Resource": "arn:aws:ssm:us-east-1:*:automation-definition/poc-*"
+        },
+        {
+            "Sid": "ssmGet",
+            "Effect": "Allow",
+            "Action": [
+                "ssm:GetAutomationExecution",
+                "ssm:DescribeAutomationStepExecutions",
+                "ssm:DescribeAutomationExecutions"
+            ],
+            "Resource": "arn:aws:ssm:us-east-1:*:automation-execution/*"
+        },
+        {
             "Sid": "AcessoS3",
             "Effect": "Allow",
             "Action": [
                 "s3:*",
                 "sqs:sendmessage"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Sid": "ssm",
-            "Effect": "Allow",
-            "Action": [
-                "ssm:StartAutomationExecution",
-                "ssm:GetAutomationExecution",
-                "ssm:DescribeAutomationStepExecutions",
-                "ssm:DescribeAutomationExecutions"
             ],
             "Resource": "*"
         }
