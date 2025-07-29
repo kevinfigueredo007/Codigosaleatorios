@@ -26,38 +26,27 @@
             "Action": [
                 "ssm:StartAutomationExecution"
             ],
-            "Resource": "arn:aws:ssm:us-east-1:*:automation-definition/poc-*",
-            "Condition": {
-                "StringEquals": {
-                    "ssm:ResourceTag/Squad": "Millennium"
-                }
-            }
-        },
-        {
-            "Sid": "taguear",
-            "Effect": "Allow",
-            "Action": [
-                "ssm:AddTagsToResource"
-            ],
-            "Resource": [
-                "arn:aws:ssm:us-east-1:*:automation-execution/*",
-                "arn:aws:ssm:us-east-1:*:automation-definition/poc-*"
-            ]
+            "Resource": "arn:aws:ssm:us-east-1:*:automation-definition/poc-*"
         },
         {
             "Sid": "ssmGet",
             "Effect": "Allow",
             "Action": [
+                "ssm:StopAutomationExecution",
                 "ssm:GetAutomationExecution",
                 "ssm:DescribeAutomationStepExecutions",
                 "ssm:DescribeAutomationExecutions"
             ],
-            "Resource": "*",
-            "Condition": {
-                "StringEquals": {
-                    "ssm:ResourceTag/Squad": "Millennium"
-                }
-            }
+            "Resource": "arn:aws:ssm:us-east-1:*:automation-execution/*"
+        },
+        {
+            "Sid": "shareDocument",
+            "Effect": "Allow",
+            "Action": [
+                "ssm:ModifyDocumentPermission",
+                "ssm:DescribeDocumentPermission"
+            ],
+            "Resource": "arn:aws:ssm:us-east-1:046219898673:document/poc-*"
         },
         {
             "Effect": "Allow",
