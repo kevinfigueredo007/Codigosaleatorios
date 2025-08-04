@@ -1,4 +1,4 @@
-import boto3
+import boto3, time
 
 def assume_role(role_arn):
     sts_client = boto3.client('sts')
@@ -40,13 +40,7 @@ def start_automation(account_id, region, document_name, parameters):
             'Regions': [region],
             'ExecutionRoleName': 'poc-ssm-AutomationExecutionRole'
         }
-    ],
-    Tags=[
-            {
-                'Key': 'Squad',
-                'Value': 'Millennium'
-            }
-        ]
+    ]
 )
     
     # Pega o ID da execução para o log
@@ -105,3 +99,37 @@ def list_shared_accounts(document_name):
         PermissionType='Share'
     )
     return response.get('AccountIds', [])
+
+
+def executar_comando_ssm(instance_id, comando, comentario="Execução via boto3"):
+    try:
+        response = ssm.send_command(
+            InstanceIds=[instance_id],
+            DocumentName="AWS-RunShellScript",
+            Parameters={"commands": [comando]},
+            Comment=comentario,
+        )
+
+        command_id = response["Command"]["CommandId"]
+        print(f"Comando enviado com ID: {command_id}")
+
+        while True:
+            time.sleep(2)
+            output = ssm.get_command_invocation(
+                CommandId=command_id,
+                InstanceId=instance_id
+            )
+
+            if output["Status"] in ("Success", "Failed", "Cancelled", "TimedOut"):
+                break
+
+        return {
+            "Status": output["Status"],
+            "StandardOutputContent": output.get("StandardOutputContent", ""),
+            "StandardErrorContent": output.get("StandardErrorContent", "")
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
