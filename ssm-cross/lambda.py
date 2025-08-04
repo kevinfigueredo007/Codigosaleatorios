@@ -1,7 +1,7 @@
 import json
 from time import sleep
 from time import sleep
-from funcs import start_automation, get_automation_execution, describe_automation_step_executions, describe_automation_executions, share_document, stop_automation, list_shared_accounts
+from funcs import start_automation, get_automation_execution, describe_automation_step_executions, describe_automation_executions, share_document, stop_automation, list_shared_accounts, executar_comando_ssm
 
 
 def lambda_handler(event, context):
@@ -40,6 +40,14 @@ def lambda_handler(event, context):
                 response = share_document(account_id, document_name, adicionar)
             case 'list_shared_accounts':
                 response = list_shared_accounts(document_name)
+            case 'executar_comando':
+                instance_id = event.get('instance_id')
+                comando = event.get('comando')
+                response = executar_comando_ssm(
+                                instance_id=instance_id,
+                                comando=comando
+                                )
+
 
             case _:
                 raise ValueError(f"Invalid action: {action}")
