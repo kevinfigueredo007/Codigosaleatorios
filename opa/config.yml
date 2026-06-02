@@ -16,6 +16,8 @@ bundles:
       min_delay_seconds: 60
       max_delay_seconds: 120
 
+
+# curl -L -o opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64_static
 # openssl req   -x509   -newkey rsa:4096   -sha256   -days 365   -nodes   -keyout private.key   -out public.crt   -subj "/CN=localhost"   -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
 # opa run --server --config-file config.yml  --tls-cert-file public.crt   --tls-private-key-file private.key --authentication=token   --authorization=basic
 # opa build -b bundle/
